@@ -1,5 +1,5 @@
 # PyTorch YOLO
-A minimal PyTorch implementation of YOLOv3, with support for training, inference and evaluation.
+A minimal PyTorch implementation of YOLOv3, adapted for Kria KV260 Deep Learning Processing Unit (DPU), with support for training, inference and evaluation.
 
 YOLOv4 and YOLOv7 weights are also compatible with this implementation.
 

@@ -147,8 +147,6 @@ class YOLOLayer(nn.Module):
 
         anchors = torch.tensor(list(chain(*anchors))).float().view(-1, 2)
         self.register_buffer('anchors', anchors)
-        self.register_buffer(
-            'anchor_grid', anchors.clone().view(1, -1, 1, 1, 2))
         self.stride = None
 
     def forward(self, x: torch.Tensor, img_size: int) -> torch.Tensor:
@@ -158,7 +156,7 @@ class YOLOLayer(nn.Module):
         :param x: Input tensor
         :param img_size: Size of the input image
         """
-        stride = img_size // x.size(2)
+        stride = float(img_size) / float(x.size(2))
         self.stride = stride
         bs, _, ny, nx = x.shape  # x(bs,255,20,20) to x(bs,3,20,20,85)
         x = x.view(bs, self.num_anchors, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
@@ -168,11 +166,13 @@ class YOLOLayer(nn.Module):
                 self.grid = self._make_grid(nx, ny).to(x.device)
 
             if self.new_coords:
-                x[..., 0:2] = (x[..., 0:2] + self.grid) * stride  # xy
-                x[..., 2:4] = x[..., 2:4] ** 2 * (4 * self.anchor_grid) # wh
+                x[..., 0:2] = (x[..., 0:2] + self.grid) * self.stride
+                anchor_grid = self.anchors.view(1, -1, 1, 1, 2)
+                x[..., 2:4] = torch.exp(x[..., 2:4]) * anchor_grid
             else:
                 x[..., 0:2] = (x[..., 0:2].sigmoid() + self.grid) * stride  # xy
-                x[..., 2:4] = torch.exp(x[..., 2:4]) * self.anchor_grid # wh
+                anchor_grid = self.anchors.view(1, -1, 1, 1, 2)
+                x[..., 2:4] = torch.exp(x[..., 2:4]) * anchor_grid
                 x[..., 4:] = x[..., 4:].sigmoid() # conf, cls
             x = x.view(bs, -1, self.no)
 
